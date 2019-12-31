@@ -5,7 +5,8 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
-import androidx.annotation.Nullable;
+//import androidx.annotation.Nullable;
+import android.support.annotation.Nullable;
 
 import com.facebook.common.executors.UiThreadImmediateExecutorService;
 import com.facebook.common.internal.Files;
@@ -53,6 +54,7 @@ import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.UUID;
+
 
 public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEventHandler {
     private String appId;
@@ -206,16 +208,16 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
         callback.invoke(null, api.sendReq(req));
     }
 
-    private void sendShareRequest(WXMediaMessage.IMediaObject media, ReadableMap data, Callback callback) {
+    private void sendShareRequest(final WXMediaMessage.IMediaObject media, final ReadableMap data, final Callback callback) {
         if (data.hasKey("thumbImageUrl")) {
             createImageRequest(Uri.parse(data.getString("thumbImageUrl")), new ImageCallback() {
                 @Override
                 public void invoke(@Nullable Bitmap thumb) {
-                    this.sendShareRequest(media, thumb, data, callback);
+                    sendShareRequest(media, thumb, data, callback);
                 }
             });
         } else {
-            this.sendShareRequest(media, null, data, callback);
+            sendShareRequest(media, null, data, callback);
         }
     }
 
@@ -238,10 +240,10 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
             message.messageExt = data.getString("messageExt");
         }
         if (thumb != null) {
-            if (thumb.length() / 1024 > THUMB_SIZE) {
+            if (thumb.getWidth()*thumb.getHeight()/1024 > THUMB_SIZE) {
                 message.thumbData = bitmapResizeGetBytes(thumb, THUMB_SIZE);
             } else {
-                message.thumbData = thumb;
+                message.thumbData = bitmapTopBytes(thumb);
             }
         }
 
@@ -261,7 +263,7 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
     public void shareText(ReadableMap data, Callback callback) {
         WXTextObject media = new WXTextObject();
         media.text = data.getString("text");
-        this.sendShareRequest(media, null, data, callback);
+        sendShareRequest(media, null, data, callback);
     }
 
     /**
@@ -271,26 +273,28 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
      */
     @ReactMethod
     public void shareImage(final ReadableMap data, final Callback callback) {
-        Uri imgUrl;
+        Uri imgUri;
+        String imageUrl; 
         try {
-            imgUrl = Uri.parse(data.getString("imageUrl"));
-            if (imgUrl.getScheme() == null) {
+            imageUrl = data.getString("imageUrl");
+            imgUri = Uri.parse(imageUrl);
+            if (imgUri.getScheme() == null) {
                 // handle static resource if no schema is provided.
-                imgUrl = getResourceDrawableURI(getReactApplicationContext(), imgUrl);
+                imgUri = getResourceDrawableURI(getReactApplicationContext(), imageUrl);
             }
         } catch (Exception ex) {
-            imgUrl = null;
+            imgUri = null;
         }
 
-        if (imgUrl == null) {
-            callback.invoke(null);
+        if (imgUri == null) {
+            callback.invoke(imgUri);
             return;
         }
-        createImageRequest(imgUrl, new ImageCallback() {
+        createImageRequest(imgUri, new ImageCallback() {
             @Override
             public void invoke(@Nullable Bitmap image) {
                 WXImageObject media = new WXImageObject(image);
-                this.sendShareRequest(media, image/* as thumb */, data, callback);
+                sendShareRequest(media, image/* as thumb */, data, callback);
             }
         });
     }
@@ -321,7 +325,7 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
         WXVideoObject media = new WXVideoObject();
         media.videoUrl = data.hasKey("videoUrl") ? data.getString("videoUrl") : null;
         media.videoLowBandUrl = data.hasKey("videoLowBandUrl") ? data.getString("videoLowBandUrl") : null;
-        this.sendShareRequest(media, data, callback);
+        sendShareRequest(media, data, callback);
     }
 
     /**
@@ -333,18 +337,18 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
     public void shareWebpage(final ReadableMap data, final Callback callback) {
         WXWebpageObject media = new WXWebpageObject();
         media.webpageUrl = data.hasKey("webpageUrl") ? data.getString("webpageUrl") : null;
-        this.sendShareRequest(media, data, callback);
+        sendShareRequest(media, data, callback);
     }
 
     /**
-     * 分享网页
+     * 分享文件
      * @param data
      * @param callback
      */
     @ReactMethod
     public void shareFile(final ReadableMap data, final Callback callback) {
         WXFileObject media = new WXFileObject(data.getString("filePath"));
-        this.sendShareRequest(media, data, callback);
+        sendShareRequest(media, data, callback);
     }
 
     /**
@@ -359,7 +363,7 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
         media.miniprogramType = data.hasKey("miniProgramType") ? data.getInt("miniProgramType") : WXMiniProgramObject.MINIPTOGRAM_TYPE_RELEASE;
         media.userName = data.hasKey("miniProgramId") ? data.getString("miniProgramId") : null;
         media.path = data.hasKey("miniProgramPath") ? data.getString("miniProgramPath") : null;
-        this.sendShareRequest(media, data, callback);
+        sendShareRequest(media, data, callback);
 
     }
 
