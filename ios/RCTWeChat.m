@@ -12,6 +12,7 @@
 #import <React/RCTBridge.h>
 #import <React/RCTLog.h>
 #import <React/RCTImageLoader.h>
+#import <React/RCTBridgeModule.h>
 
 // Define error messages
 #define NOT_REGISTERED (@"registerApp required.")
@@ -247,13 +248,13 @@ RCT_EXPORT_METHOD(sendErrorUserCancelResponse:(NSString *)message
     [WXApi sendResp:resp completion:completion];
 }
 
-- (BOOL)sendShareRequestWithMedia:(NSObject *)media (NSDictionary *)data (RCTResponseSenderBlock)callback
+- (BOOL)sendShareRequestWithMedia:(NSObject *)media data:(NSDictionary *)data callback:(RCTResponseSenderBlock)callback
 {
     NSString *thumbURL = data[@"thumbImageUrl"];
     NSData *thumb = NULL;
     if (thumbURL != NULL)
     {
-        UIImage *image = [self getImageFromUrl:thumbURL];
+         UIImage *image = [self getImageFromUrl:thumbURL];
         thumb = [self compressImage:image toByte:32678];
     }
     return [self sendShareRequestInternal:NO
@@ -264,13 +265,13 @@ RCT_EXPORT_METHOD(sendErrorUserCancelResponse:(NSString *)message
                                  callback:callback];
 }
 
-- (BOOL)sendShareRequestWithText:(NSString *)text (RCTResponseSenderBlock)callback
+- (BOOL)sendShareRequestWithText:(NSString *)text callback:(RCTResponseSenderBlock)callback
 {
     return [self sendShareRequestInternal:YES
                                      text:text
                                     media:NULL
                                     thumb:NULL
-                                     data:data
+                                     data:NULL
                                  callback:callback];
 }
 
@@ -278,16 +279,18 @@ RCT_EXPORT_METHOD(sendErrorUserCancelResponse:(NSString *)message
                                 text:(NSString *)text
                                 media:(NSObject *)media
                                 thumb:(NSData *)thumb
-                               data :(NSDictionary *)data
+                                data:(NSDictionary *)data
                                 callback:(RCTResponseSenderBlock)callback
 {
     SendMessageToWXReq *req = [[SendMessageToWXReq alloc] init];
+       
     req.bText = bText;
-    req.scene =  [data[@"scene"] intValue] || WXSceneSession;
+//    req.scene = data[@"scene"] || WXSceneSession;
+     req.scene = [data[@"scene"] intValue] || WXSceneSession;
 
     if (req.bText == YES)
     {
-        req.text = text || @"";
+        req.text = text ;
     }
     else
     {
@@ -329,7 +332,13 @@ RCT_EXPORT_METHOD(sendErrorUserCancelResponse:(NSString *)message
         callback(@[success ? [NSNull null] : INVOKE_FAILED]);
         return;
     };
+    
+//    NSLog(@"req99 :%d",req.scene);
     [WXApi sendReq:req completion:completion];
+
+    
+    return bText;
+    
 }
 
 RCT_EXPORT_METHOD(shareText:(NSDictionary *)data

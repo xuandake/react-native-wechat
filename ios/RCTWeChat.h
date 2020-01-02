@@ -7,6 +7,7 @@
 #import <React/RCTBridgeModule.h>
 #import "WXApi.h"
 
+
 #define RCTWXEventName @"WeChat_Resp"
 #define RCTWXSendMessageEvent @"SendMessageToWX.Resp"
 #define RCTWXSendAuthEvent @"SendAuth.Resp"
