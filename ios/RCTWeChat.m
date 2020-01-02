@@ -253,7 +253,8 @@ RCT_EXPORT_METHOD(sendErrorUserCancelResponse:(NSString *)message
     NSData *thumb = NULL;
     if (thumbURL != NULL)
     {
-        thumb = [self compressImage:thumb toByte:32678];
+        UIImage *image = [self getImageFromUrl:thumbURL];
+        thumb = [self compressImage:image toByte:32678];
     }
     return [self sendShareRequestInternal:NO
                                      text:NULL
@@ -274,15 +275,15 @@ RCT_EXPORT_METHOD(sendErrorUserCancelResponse:(NSString *)message
 }
 
 - (BOOL)sendShareRequestInternal:(BOOL)bText
-                                :(NSString *)text
-                                :(NSObject *)media
-                                :(NSData *)thumb
-                                :(NSDictionary *)data
-                                :(RCTResponseSenderBlock)callback
+                                text:(NSString *)text
+                                media:(NSObject *)media
+                                thumb:(NSData *)thumb
+                               data :(NSDictionary *)data
+                                callback:(RCTResponseSenderBlock)callback
 {
     SendMessageToWXReq *req = [[SendMessageToWXReq alloc] init];
     req.bText = bText;
-    req.scene = data[@"scene"] || WXSceneSession;
+    req.scene =  [data[@"scene"] intValue] || WXSceneSession;
 
     if (req.bText == YES)
     {
@@ -405,8 +406,8 @@ RCT_EXPORT_METHOD(shareMiniProgram:(NSDictionary *)data
 {
     WXMiniProgramObject *media = [WXMiniProgramObject object];
     media.webpageUrl = data[@"webpageUrl"];
-    media.miniProgramType = data[@"miniProgramType"] || WXMiniProgramTypeRelease;
-    media.userName = data[@"userName"];
+    media.miniProgramType = [data[@"miniProgramType"]  intValue] || WXMiniProgramTypeRelease;
+    media.userName = data[@"miniProgramId"];
     media.path = data[@"path"];
     media.withShareTicket = data[@"withShareTicket"];
     [self sendShareRequestWithMedia:media data:data callback:callback];
@@ -449,7 +450,8 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
         body[@"errStr"] = r.errStr;
         body[@"lang"] = r.lang;
         body[@"country"] =r.country;
-        [self.bridge.eventDispatcher sendDeviceEventWithName:RCTWXEventName body:body];
+//        [self.bridge.eventDispatcher sendDeviceEventWithName:RCTWXEventName body:body];
+         [self sendEventWithName:RCTWXEventName body:body];
     }
     else if ([resp isKindOfClass:[SendAuthResp class]])
     {
@@ -466,12 +468,14 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
             if (self.appId && r)
             {
                 [body addEntriesFromDictionary:@{@"appid":self.appId, @"code":r.code}];
-                [self.bridge.eventDispatcher sendDeviceEventWithName:RCTWXEventName body:body];
+//                [self.bridge.eventDispatcher sendDeviceEventWithName:RCTWXEventName body:body];
+                 [self sendEventWithName:RCTWXEventName body:body];
             }
         }
         else
         {
-            [self.bridge.eventDispatcher sendDeviceEventWithName:RCTWXEventName body:body];
+//            [self.bridge.eventDispatcher sendDeviceEventWithName:RCTWXEventName body:body];
+             [self sendEventWithName:RCTWXEventName body:body];
         }
     }
     else if ([resp isKindOfClass:[WXLaunchMiniProgramResp class]])
@@ -480,7 +484,8 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
         NSMutableDictionary *body = @{@"errCode":@(r.errCode)}.mutableCopy;
         body[@"type"] = RCTWXLaunchMiniProgramEvent;
         body[@"data"] = r.extMsg;
-        [self.bridge.eventDispatcher sendDeviceEventWithName:RCTWXEventName body:body];
+//        [self.bridge.eventDispatcher sendDeviceEventWithName:RCTWXEventName body:body];
+         [self sendEventWithName:RCTWXEventName body:body];
     }
     else if ([resp isKindOfClass:[PayResp class]])
     {
@@ -490,8 +495,17 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
         body[@"errStr"] = r.errStr;
         body[@"type"] = @(r.type);
         body[@"returnKey"] =r.returnKey;
-        [self.bridge.eventDispatcher sendDeviceEventWithName:RCTWXEventName body:body];
+//        [self.bridge.eventDispatcher sendDeviceEventWithName:RCTWXEventName body:body];
+         [self sendEventWithName:RCTWXEventName body:body];
     }
+}
+
+- (NSDictionary<NSString *, NSString *> *)constantsToExport {
+  return @{ @"WeChat_Resp": RCTWXEventName,};
+}
+
+- (NSArray<NSString *> *)supportedEvents {
+  return @[RCTWXEventName,];
 }
 
 @end
