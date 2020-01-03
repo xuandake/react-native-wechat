@@ -210,7 +210,9 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
 
     private void sendShareRequest(final WXMediaMessage.IMediaObject media, final ReadableMap data, final Callback callback) {
         if (data.hasKey("thumbImageUrl")) {
-            createImageRequest(Uri.parse(data.getString("thumbImageUrl")), new ImageCallback() {
+           
+            Uri imgUri = Uri.parse(data.getString("thumbImageUrl"));
+            createImageRequest( imgUri, new ImageCallback() {
                 @Override
                 public void invoke(@Nullable Bitmap thumb) {
                     sendShareRequest(media, thumb, data, callback);
@@ -240,7 +242,10 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
             message.messageExt = data.getString("messageExt");
         }
         if (thumb != null) {
-            if (thumb.getWidth()*thumb.getHeight()/1024 > THUMB_SIZE) {
+               int w = thumb.getWidth();
+               int h = thumb.getHeight();
+               int length = w*h;
+            if (length / 1024 > THUMB_SIZE) {
                 message.thumbData = bitmapResizeGetBytes(thumb, THUMB_SIZE);
             } else {
                 message.thumbData = bitmapTopBytes(thumb);
@@ -273,10 +278,9 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
      */
     @ReactMethod
     public void shareImage(final ReadableMap data, final Callback callback) {
-        Uri imgUri;
-        String imageUrl; 
+        Uri imgUri = null;
+        String imageUrl = data.hasKey("imageUrl") ? data.getString("imageUrl"): null;
         try {
-            imageUrl = data.getString("imageUrl");
             imgUri = Uri.parse(imageUrl);
             if (imgUri.getScheme() == null) {
                 // handle static resource if no schema is provided.
