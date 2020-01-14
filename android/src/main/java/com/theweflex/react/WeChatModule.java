@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.graphics.Matrix;
 //import androidx.annotation.Nullable;
 import android.support.annotation.Nullable;
 
@@ -78,7 +79,7 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
         // FIXME(little-snow-fox): 该算法存在效率问题，希望有"义士"可以进行优化
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         // 质量压缩方法，这里100表示第一次不压缩，把压缩后的数据缓存到 baos
-        image.compress(Bitmap.CompressFormat.JPEG, 10, baos);
+        image.compress(Bitmap.CompressFormat.JPEG, 100, baos);
         int options = 10;
         // 循环判断压缩后依然大于 32kb 则继续压缩
         while (baos.toByteArray().length / 1024 > size) {
@@ -92,6 +93,34 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
         return baos.toByteArray();
     }
 
+    /**
+     * Compress the bitmap image
+     */
+   private static byte[] bitmapResizeGetBytesEx(Bitmap image, int size){
+
+       ByteArrayOutputStream out = new ByteArrayOutputStream();  
+       image.compress(Bitmap.CompressFormat.JPEG, 85, out);  
+       float zoom = (float)Math.sqrt(size * 1024 / (float)out.toByteArray().length);  
+  
+        Matrix matrix = new Matrix();  
+        matrix.setScale(zoom, zoom);  
+  
+        Bitmap result = Bitmap.createBitmap(image, 0, 0, image.getWidth(), image.getHeight(), matrix, true);  
+  
+        out.reset();  
+        result.compress(Bitmap.CompressFormat.JPEG, 85, out);  
+        while(out.toByteArray().length > size * 1024){  
+           System.out.println(out.toByteArray().length);  
+           matrix.setScale(0.9f, 0.9f);  
+           result = Bitmap.createBitmap(result, 0, 0, result.getWidth(), result.getHeight(), matrix, true);  
+           out.reset();  
+           result.compress(Bitmap.CompressFormat.JPEG, 85, out);  
+        }
+
+         return out.toByteArray();
+   }
+
+    
     public WeChatModule(ReactApplicationContext context) {
         super(context);
     }
@@ -242,11 +271,8 @@ public class WeChatModule extends ReactContextBaseJavaModule implements IWXAPIEv
             message.messageExt = data.getString("messageExt");
         }
         if (thumb != null) {
-               int w = thumb.getWidth();
-               int h = thumb.getHeight();
-               int length = w*h;
-            if (length / 1024 > THUMB_SIZE) {
-                message.thumbData = bitmapResizeGetBytes(thumb, THUMB_SIZE);
+            if (thumb.getRowBytes()*thumb.getHeight() / 1024 > THUMB_SIZE) {
+                message.thumbData = bitmapResizeGetBytesEx(thumb, THUMB_SIZE);
             } else {
                 message.thumbData = bitmapTopBytes(thumb);
             }
